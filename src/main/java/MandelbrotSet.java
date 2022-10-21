@@ -68,7 +68,7 @@ public class MandelbrotSet extends JPanel {
                 scale *= 2;
 
                 new Thread(MandelbrotSet.this::generateMandelbrot).start();
-                new DrawThread().start();
+                new Thread(new DrawMandelbrot()).start();
             }
         });
 
@@ -137,13 +137,13 @@ public class MandelbrotSet extends JPanel {
         g.drawImage(image, 0, 0, this);
     }
 
-    private class DrawThread extends Thread {
+    private class DrawMandelbrot implements Runnable {
         @Override
         public void run() {
             while (!fullyDrawn) {
                 repaint();
                 try {
-                    sleep(5);
+                    Thread.sleep(5);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
