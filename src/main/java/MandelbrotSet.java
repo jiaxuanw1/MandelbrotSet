@@ -13,7 +13,8 @@ import org.apache.commons.math3.complex.Complex;
 
 public class MandelbrotSet extends JPanel {
 
-    private final int maxIterations = 500;
+    private final int MAX_ITERATIONS = 500;
+    private final int NUM_THREADS = 256;
 
     private final int width = 960;
     private final int height = 720;
@@ -25,7 +26,7 @@ public class MandelbrotSet extends JPanel {
 
     private BufferedImage image;
 
-    private Color[] colors = new Color[] {
+    private final Color[] colors = new Color[] {
             new Color(66, 30, 15),
             new Color(25, 7, 26),
             new Color(9, 1, 47),
@@ -81,18 +82,36 @@ public class MandelbrotSet extends JPanel {
 
     public void generateMandelbrot() {
         fullyDrawn = false;
-        for (int x = 0; x < width; x++) {
-            for (int y = 0; y < height; y++) {
-                double iterations = numIterations(pointToComplex(x, y));
-                if (iterations < maxIterations) {
-                    Color color1 = colors[((int) Math.floor(iterations)) % colors.length];
-                    Color color2 = colors[((int) Math.floor(iterations) + 1) % colors.length];
-                    image.setRGB(x, y, linearInterpolateColor(color1, color2, iterations % 1).getRGB());
-                } else {
-                    image.setRGB(x, y, Color.BLACK.getRGB());
+
+        Thread[] threads = new Thread[NUM_THREADS];
+        for (int i = 0; i < NUM_THREADS; i++) {
+            final int threadNum = i;
+            Thread calcThread = new Thread(() -> {
+                for (int x = threadNum * width / NUM_THREADS; x < (threadNum + 1) * width / NUM_THREADS; x++) {
+                    for (int y = 0; y < height; y++) {
+                        double iterations = numIterations(pointToComplex(x, y));
+                        if (iterations < MAX_ITERATIONS) {
+                            Color color1 = colors[((int) Math.floor(iterations)) % colors.length];
+                            Color color2 = colors[((int) Math.floor(iterations) + 1) % colors.length];
+                            image.setRGB(x, y, linearInterpolateColor(color1, color2, iterations % 1).getRGB());
+                        } else {
+                            image.setRGB(x, y, Color.BLACK.getRGB());
+                        }
+                    }
                 }
+            });
+            threads[i] = calcThread;
+            calcThread.start();
+        }
+
+        for (Thread t : threads) {
+            try {
+                t.join();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
             }
         }
+
         fullyDrawn = true;
     }
 
@@ -110,11 +129,11 @@ public class MandelbrotSet extends JPanel {
     public double numIterations(Complex c) {
         Complex z = Complex.ZERO;
         double n = 0;
-        while (z.abs() <= 10 && n < maxIterations) {
+        while (z.abs() <= 10 && n < MAX_ITERATIONS) {
             z = z.multiply(z).add(c);
             n++;
         }
-        if (n < maxIterations) {
+        if (n < MAX_ITERATIONS) {
             double log_zn = Math.log(z.abs());
             double nu = Math.log(log_zn / Math.log(2)) / Math.log(2);
             n += 1 - nu;
