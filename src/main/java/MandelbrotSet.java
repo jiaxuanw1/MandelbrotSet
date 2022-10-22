@@ -81,9 +81,6 @@ public class MandelbrotSet extends JPanel {
     }
 
     public void generateMandelbrot() {
-        fullyDrawn = false;
-
-        Thread[] threads = new Thread[NUM_THREADS];
         for (int i = 0; i < NUM_THREADS; i++) {
             final int threadNum = i;
             Thread calcThread = new Thread(() -> {
@@ -100,19 +97,8 @@ public class MandelbrotSet extends JPanel {
                     }
                 }
             });
-            threads[i] = calcThread;
             calcThread.start();
         }
-
-        for (Thread t : threads) {
-            try {
-                t.join();
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        }
-
-        fullyDrawn = true;
     }
 
     public double linearInterpolate(double v0, double v1, double t) {
@@ -159,10 +145,10 @@ public class MandelbrotSet extends JPanel {
     private class DrawMandelbrot implements Runnable {
         @Override
         public void run() {
-            while (!fullyDrawn) {
+            while (true) {
                 repaint();
                 try {
-                    Thread.sleep(5);
+                    Thread.sleep(15);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
